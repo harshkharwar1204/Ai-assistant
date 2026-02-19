@@ -1,9 +1,0 @@
-{
-  "/_not-found/page": "app/_not-found/page.js",
-  "/api/assistant/chat/route": "app/api/assistant/chat/route.js",
-  "/api/expenses/sync/route": "app/api/expenses/sync/route.js",
-  "/api/tasks/sync/route": "app/api/tasks/sync/route.js",
-  "/manifest.webmanifest/route": "app/manifest.webmanifest/route.js",
-  "/api/groceries/plan/route": "app/api/groceries/plan/route.js",
-  "/page": "app/page.js"
-}

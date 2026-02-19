@@ -1,0 +1,161 @@
+:root {
+    /* Trae-Inspired Theme (Refined) */
+    --bg-color: #000000;
+    /* Pure Black */
+    --card-bg: #111111;
+    /* Very Dark Grey */
+    --text-color: #FFFFFF;
+    --text-secondary: #888888;
+
+    /* Accents */
+    --primary-color: #00E599;
+    /* Neon Green */
+    --primary-dim: rgba(0, 229, 153, 0.1);
+    --border-color: #222222;
+    /* Subtle border */
+    --border-highlight: #00E599;
+    /* Neon border */
+
+    /* Status */
+    --success-color: #00E599;
+    --danger-color: #FF453A;
+
+    --card-radius: 16px;
+
+    --font-family: 'DM Sans', 'Inter', sans-serif;
+    --safe-top: env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+}
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-family);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+h1 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+h2 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+/* Trae Card Style */
+.card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+    padding: 24px;
+    transition: all 0.2s ease;
+}
+
+.card:active {
+    transform: scale(0.98);
+    border-color: #444;
+}
+
+.card-highlight {
+    border-color: var(--primary-color);
+    background: radial-gradient(circle at top right, rgba(0, 229, 153, 0.05), transparent 70%);
+}
+
+.glass-panel {
+    background: rgba(10, 10, 10, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Hover Reveal Utility */
+.show-on-hover {
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.card:hover .show-on-hover {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .show-on-hover {
+        opacity: 1 !important;
+    }
+}
+
+/* Typography Inputs */
+button,
+input {
+    font-family: var(--font-family);
+}
+
+input {
+    color: var(--text-color);
+}
+
+.animate-enter {
+    animation: slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Page Transition */
+.page-transition {
+    animation: pageSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    position: absolute;
+    inset: 0;
+}
+
+@keyframes pageSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(60px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Utility classes */
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.gap-3 {
+    gap: 12px;
+}
+
+.gap-4 {
+    gap: 16px;
+}

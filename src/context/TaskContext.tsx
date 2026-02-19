@@ -1,8 +1,10 @@
+'use client';
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Task } from '../types/task';
-import { RolloverDialog } from '../components/RolloverDialog';
-import { PredictionService } from '../services/PredictionService';
-import { generateId } from '../utils/generateId';
+import { Task } from '@/types/task';
+import { RolloverDialog } from '@/components/RolloverDialog';
+import { PredictionService } from '@/services/PredictionService';
+import { generateId } from '@/utils/generateId';
 
 // Helper to get YYYY-MM-DD
 const toDateKey = (d: Date) => d.toISOString().split('T')[0];
@@ -14,17 +16,24 @@ interface TaskContextType {
     updateTask: (id: string, updates: Partial<Task>) => void;
     deleteTask: (id: string) => void;
     requestNotificationPermission: () => void;
+    syncReminders: () => Promise<void>;
+    isSyncing: boolean;
+    syncError: string | null;
+    clearTasksByDate: (date: string) => void;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [tasks, setTasks] = useState<Task[]>(() => {
+        if (typeof window === 'undefined') return [];
         const saved = localStorage.getItem('life-os-tasks');
         return saved ? JSON.parse(saved) : [];
     });
 
     const [missedTasks, setMissedTasks] = useState<Task[]>([]);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [syncError, setSyncError] = useState<string | null>(null);
 
     useEffect(() => {
         localStorage.setItem('life-os-tasks', JSON.stringify(tasks));
@@ -71,7 +80,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         if (Notification.permission === 'granted') {
                             new Notification('Task Due!', {
                                 body: `It's time for: ${task.title}`,
-                                icon: '/pwa-192x192.png'
+                                icon: '/icon-192x192.png'
                             });
                         }
                     }
@@ -93,8 +102,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
         setTasks(prev => [...prev, newTask]);
 
-        // Auto-record purely for frequency if needed, but better on completion
-        if (Notification.permission === 'default') {
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
             requestNotificationPermission();
         }
     };
@@ -104,7 +112,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (task.id === id) {
                 const newStatus = task.status === 'completed' ? 'pending' : 'completed';
 
-                // AI Training Hook
                 if (newStatus === 'completed') {
                     PredictionService.recordCompletion(task.title);
                 }
@@ -125,8 +132,41 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTasks(prev => prev.filter(task => task.id !== id));
     };
 
+    const syncReminders = async () => {
+        setIsSyncing(true);
+        setSyncError(null);
+        try {
+            const res = await fetch('/api/tasks/sync');
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to sync reminders');
+            }
+            const remoteTasks: Task[] = await res.json();
+
+            setTasks(prev => {
+                const existingTitles = new Set(prev.map(t => t.title.toLowerCase()));
+                const newTasks = remoteTasks.filter(t => !existingTitles.has(t.title.toLowerCase()));
+                return [...prev, ...newTasks];
+            });
+        } catch (err: any) {
+            setSyncError(err.message || 'Sync failed');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    const clearTasksByDate = (date: string) => {
+        setTasks(prev => prev.filter(t => {
+            const taskDate = t.scheduledDate || toDateKey(new Date(t.createdAt));
+            return taskDate !== date;
+        }));
+    };
+
     return (
-        <TaskContext.Provider value={{ tasks, addTask, toggleTaskCompletion, deleteTask, updateTask, requestNotificationPermission }}>
+        <TaskContext.Provider value={{
+            tasks, addTask, toggleTaskCompletion, deleteTask, updateTask,
+            requestNotificationPermission, syncReminders, isSyncing, syncError, clearTasksByDate
+        }}>
             {missedTasks.length > 0 && (
                 <RolloverDialog
                     missedTasks={missedTasks}

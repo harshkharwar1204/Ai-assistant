@@ -1,6 +1,7 @@
+'use client';
+
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import '../styles/main.css';
 
 interface DateStripProps {
     selectedDate: string; // YYYY-MM-DD
@@ -9,7 +10,12 @@ interface DateStripProps {
     onWeekChange: (offset: number) => void;
 }
 
-const toDateKey = (d: Date) => d.toISOString().split('T')[0];
+const toDateKey = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
 
 export const DateStrip: React.FC<DateStripProps> = ({ selectedDate, onSelectDate, weekOffset, onWeekChange }) => {
     const today = new Date();

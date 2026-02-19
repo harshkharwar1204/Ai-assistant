@@ -1,7 +1,8 @@
+'use client';
+
 import React from 'react';
-import { Task } from '../types/task';
+import { Task } from '@/types/task';
 import { ArrowRight, Trash2, CalendarClock } from 'lucide-react';
-import '../styles/main.css';
 
 interface RolloverDialogProps {
     missedTasks: Task[];

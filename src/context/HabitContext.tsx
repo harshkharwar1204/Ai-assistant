@@ -1,6 +1,8 @@
+'use client';
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Habit } from '../types/habit';
-import { generateId } from '../utils/generateId';
+import { Habit } from '@/types/habit';
+import { generateId } from '@/utils/generateId';
 
 interface HabitContextType {
     habits: Habit[];
@@ -8,12 +10,14 @@ interface HabitContextType {
     toggleHabit: (id: string) => void;
     updateHabit: (id: string, updates: Partial<Habit>) => void;
     deleteHabit: (id: string) => void;
+    deleteAllHabits: () => void;
 }
 
 const HabitContext = createContext<HabitContextType | undefined>(undefined);
 
 export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [habits, setHabits] = useState<Habit[]>(() => {
+        if (typeof window === 'undefined') return [];
         const saved = localStorage.getItem('life-os-habits');
         return saved ? JSON.parse(saved) : [];
     });
@@ -45,11 +49,9 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             let newStreak = habit.streak;
 
             if (isCompletedToday) {
-                // Toggle OFF
                 newDates = newDates.filter(d => new Date(d).toDateString() !== today);
-                newStreak = Math.max(0, newStreak - 1); // Simple logic, ideally recalculate streak
+                newStreak = Math.max(0, newStreak - 1);
             } else {
-                // Toggle ON
                 newDates.push(new Date().toISOString());
                 newStreak += 1;
             }
@@ -72,8 +74,12 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setHabits(prev => prev.filter(h => h.id !== id));
     };
 
+    const deleteAllHabits = () => {
+        setHabits([]);
+    };
+
     return (
-        <HabitContext.Provider value={{ habits, addHabit, toggleHabit, updateHabit, deleteHabit }}>
+        <HabitContext.Provider value={{ habits, addHabit, toggleHabit, updateHabit, deleteHabit, deleteAllHabits }}>
             {children}
         </HabitContext.Provider>
     );

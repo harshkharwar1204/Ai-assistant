@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
-import { useTasks } from '../../context/TaskContext';
-import { Check, Trash2, Edit2, X, Save } from 'lucide-react';
-import { DateStrip } from '../../components/DateStrip';
-import { Header } from '../../components/Header';
-import '../../styles/main.css';
+'use client';
 
-const toDateKey = (d: Date) => d.toISOString().split('T')[0];
+import React, { useState } from 'react';
+import { useTasks } from '@/context/TaskContext';
+import { Check, Trash2, Edit2, X, Save, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { DateStrip } from '@/components/DateStrip';
+import { Header } from '@/components/Header';
+
+const toDateKey = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
 
 interface DailyTaskViewProps {
     selectedDate: string;
@@ -17,7 +23,7 @@ interface DailyTaskViewProps {
 export const DailyTaskView: React.FC<DailyTaskViewProps> = ({
     selectedDate, onSelectDate, weekOffset, onWeekChange
 }) => {
-    const { tasks, toggleTaskCompletion, deleteTask, updateTask } = useTasks();
+    const { tasks, toggleTaskCompletion, deleteTask, updateTask, syncReminders, isSyncing, syncError, clearTasksByDate } = useTasks();
     const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
     const [editTitle, setEditTitle] = useState('');
 
@@ -80,7 +86,30 @@ export const DailyTaskView: React.FC<DailyTaskViewProps> = ({
                 alignItems: 'center',
                 marginBottom: '16px'
             }}>
-                <h2 style={{ fontSize: '20px' }}>{selectedDateLabel}</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <h2 style={{ fontSize: '20px', margin: 0 }}>{selectedDateLabel}</h2>
+                    {isToday && (
+                        <button
+                            onClick={() => syncReminders()}
+                            disabled={isSyncing}
+                            style={{
+                                background: 'transparent',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '8px',
+                                padding: '6px 10px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '12px',
+                                color: 'var(--text-secondary)',
+                                cursor: isSyncing ? 'not-allowed' : 'pointer',
+                            }}
+                        >
+                            {isSyncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                            {isSyncing ? 'Syncing...' : 'Sync Reminders'}
+                        </button>
+                    )}
+                </div>
                 <span style={{
                     fontSize: '14px',
                     color: 'var(--primary-color)',
@@ -92,6 +121,53 @@ export const DailyTaskView: React.FC<DailyTaskViewProps> = ({
                     {dateTasks.filter(t => t.status === 'pending').length} Left
                 </span>
             </div>
+
+            {
+                dateTasks.length > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                        <button
+                            onClick={() => {
+                                if (confirm(`Are you sure you want to clear all tasks for ${selectedDateLabel}? This cannot be undone.`)) {
+                                    clearTasksByDate(selectedDate);
+                                }
+                            }}
+                            style={{
+                                background: 'rgba(255, 59, 48, 0.1)',
+                                color: '#FF3B30',
+                                border: '1px solid #FF3B30',
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}
+                        >
+                            <Trash2 size={12} /> Clear {selectedDateLabel}
+                        </button>
+                    </div>
+                )
+            }
+
+            {syncError && (
+                <div style={{
+                    marginBottom: '16px',
+                    padding: '8px 12px',
+                    background: 'rgba(255, 69, 58, 0.1)',
+                    border: '1px solid var(--danger-color)',
+                    borderRadius: '8px',
+                    color: 'var(--danger-color)',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                }}>
+                    <AlertCircle size={14} />
+                    {syncError}
+                </div>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {sortedTasks.map((task, index) => (
@@ -219,6 +295,6 @@ export const DailyTaskView: React.FC<DailyTaskViewProps> = ({
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };

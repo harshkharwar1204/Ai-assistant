@@ -1,6 +1,6 @@
-import { Task } from '../types/task';
-import { Habit } from '../types/habit';
-import { GroceryItem } from '../types/grocery';
+import { Task } from '@/types/task';
+import { Habit } from '@/types/habit';
+import { GroceryItem } from '@/types/grocery';
 
 export interface Insight {
     id: string;

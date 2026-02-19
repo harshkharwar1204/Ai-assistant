@@ -1,10 +1,11 @@
+'use client';
+
 import React, { useState } from 'react';
-import { useHabits } from '../../context/HabitContext';
+import { useHabits } from '@/context/HabitContext';
 import { Plus, Flame, Check, Edit2, Trash2, Save, X } from 'lucide-react';
-import '../../styles/main.css';
 
 export const HabitView: React.FC = () => {
-    const { habits, addHabit, toggleHabit, updateHabit, deleteHabit } = useHabits();
+    const { habits, addHabit, toggleHabit, updateHabit, deleteHabit, deleteAllHabits } = useHabits();
     const [newHabitName, setNewHabitName] = useState('');
 
     // Edit State
@@ -38,8 +39,36 @@ export const HabitView: React.FC = () => {
 
     return (
         <div style={{ padding: '24px 24px', paddingBottom: '120px', height: '100%', overflowY: 'auto' }}>
-            <h1 style={{ fontSize: '32px', marginBottom: '8px' }}>Habits</h1>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>Build your discipline.</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <h1 style={{ fontSize: '32px', marginBottom: '8px' }}>Habits</h1>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>Build your discipline.</p>
+                </div>
+                {habits.length > 0 && (
+                    <button
+                        onClick={() => {
+                            if (confirm('Are you sure you want to delete ALL habits? This will remove all streaks and history. This cannot be undone.')) {
+                                deleteAllHabits();
+                            }
+                        }}
+                        style={{
+                            background: 'rgba(255, 59, 48, 0.1)',
+                            color: '#FF3B30',
+                            border: '1px solid #FF3B30',
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}
+                    >
+                        <Trash2 size={14} /> Clear All
+                    </button>
+                )}
+            </div>
 
             {/* Quick Add */}
             <form onSubmit={handleSubmit} style={{ marginBottom: '40px' }}>

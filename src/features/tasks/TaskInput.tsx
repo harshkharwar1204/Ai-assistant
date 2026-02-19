@@ -1,8 +1,9 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Sparkles } from 'lucide-react';
-import { useTasks } from '../../context/TaskContext';
-import { PredictionService } from '../../services/PredictionService';
-import '../../styles/main.css';
+import { useTasks } from '@/context/TaskContext';
+import { PredictionService } from '@/services/PredictionService';
 
 interface TaskInputProps {
     selectedDate: string; // YYYY-MM-DD
@@ -36,7 +37,13 @@ export const TaskInput: React.FC<TaskInputProps> = ({ selectedDate }) => {
         setSuggestions(prev => prev.filter(s => s !== sug));
     };
 
-    const isToday = selectedDate === new Date().toISOString().split('T')[0];
+    const isToday = (() => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return selectedDate === `${year}-${month}-${day}`;
+    })();
     const dateLabel = isToday
         ? ''
         : new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -46,7 +53,7 @@ export const TaskInput: React.FC<TaskInputProps> = ({ selectedDate }) => {
             position: 'fixed',
             bottom: '130px',
             left: '20px',
-            right: '20px',
+            right: '90px', // Avoid FAB overlap
             zIndex: 100
         }}>
             {/* AI Suggestions Chips */}

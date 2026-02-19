@@ -1,12 +1,13 @@
+'use client';
+
 import React, { useMemo } from 'react';
-import { useTasks } from '../../context/TaskContext';
-import { useExpenses } from '../../context/ExpenseContext';
-import { useHabits } from '../../context/HabitContext';
-import { useGrocery } from '../../context/GroceryContext';
-import { analyzeData } from '../../services/IntelligenceService';
+import { useTasks } from '@/context/TaskContext';
+import { useExpenses } from '@/context/ExpenseContext';
+import { useHabits } from '@/context/HabitContext';
+import { useGrocery } from '@/context/GroceryContext';
+import { analyzeData } from '@/services/IntelligenceService';
 import { CheckCircle, TrendingUp, Flame, ShoppingBag, ArrowRight, Lightbulb } from 'lucide-react';
-import { Header } from '../../components/Header';
-import '../../styles/main.css';
+import { Header } from '@/components/Header';
 
 interface DashboardProps {
     onNavigate: (view: 'tasks' | 'expenses' | 'grocery' | 'habits') => void;
@@ -15,7 +16,7 @@ interface DashboardProps {
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     const { tasks } = useTasks();
     const { getDailyTotal } = useExpenses();
-    const { habits } = useHabits(); // Fixed: Hook called at top level
+    const { habits } = useHabits();
     const { shoppingList } = useGrocery();
 
     // Task Stats
@@ -28,7 +29,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     // Insights
     const insights = useMemo(() =>
         analyzeData(tasks, getDailyTotal(), habits, shoppingList),
-        [tasks, getDailyTotal, habits, shoppingList] // usages correct dependencies
+        [tasks, getDailyTotal, habits, shoppingList]
     );
 
     return (

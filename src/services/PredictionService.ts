@@ -9,16 +9,22 @@ interface CompletionRecord {
 
 const STORAGE_KEY = 'life-os-predictions';
 
+const getRecords = (): CompletionRecord[] => {
+    if (typeof window === 'undefined') return [];
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+};
+
 export const PredictionService = {
     // Learn: Save a completion record
     recordCompletion: (taskTitle: string) => {
+        if (typeof window === 'undefined') return;
         const now = new Date();
-        const records: CompletionRecord[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        const records = getRecords();
 
         const existing = records.find(r =>
             r.title === taskTitle &&
             r.dayOfWeek === now.getDay() &&
-            Math.abs(r.hour - now.getHours()) <= 1 // Group within +/- 1 hour
+            Math.abs(r.hour - now.getHours()) <= 1
         );
 
         if (existing) {
@@ -37,21 +43,20 @@ export const PredictionService = {
 
     // Predict: Get top suggestions for right now
     getSuggestions: (): string[] => {
+        if (typeof window === 'undefined') return [];
         const now = new Date();
         const currentHour = now.getHours();
         const currentDay = now.getDay();
-        const records: CompletionRecord[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        const records = getRecords();
 
-        // Filter for relevant context (Same day, similar time)
         const relevant = records.filter(r =>
             r.dayOfWeek === currentDay &&
-            Math.abs(r.hour - currentHour) <= 2 // +/- 2 hours window
+            Math.abs(r.hour - currentHour) <= 2
         );
 
-        // Sort by frequency
         return relevant
             .sort((a, b) => b.count - a.count)
             .map(r => r.title)
-            .slice(0, 3); // Top 3
+            .slice(0, 3);
     }
 };

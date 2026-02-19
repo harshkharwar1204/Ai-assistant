@@ -183,7 +183,7 @@ export const ChatbotView: React.FC = () => {
                     bottom: 0,
                     left: 0,
                     right: 0,
-                    padding: '16px 110px 16px 16px', // Increased right padding for FAB overlap
+                    padding: '16px', // Full width
                     background: 'linear-gradient(0deg, #0a0a0a 80%, transparent 100%)',
                     zIndex: 10
                 }}>

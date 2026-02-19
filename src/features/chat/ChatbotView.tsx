@@ -1,14 +1,64 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAssistant } from '@/context/AssistantContext';
-import { Mic, Send, Paperclip, Sparkles, BookOpen, Gift, Smile, Dumbbell, Calendar } from 'lucide-react';
+import { Mic, MicOff, Send, Paperclip, Sparkles, BookOpen, Gift, Smile, Dumbbell, Calendar } from 'lucide-react';
 
 export const ChatbotView: React.FC = () => {
     const { messages, sendMessage, isTyping } = useAssistant();
     const [inputValue, setInputValue] = useState('');
-    const [isListening, setIsListening] = useState(false); // Placeholder for voice state
+    const [isListening, setIsListening] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const recognitionRef = useRef<any>(null);
+
+    // Initialize Speech Recognition
+    useEffect(() => {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) return;
+
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = 'en-IN';
+
+        recognition.onresult = (event: any) => {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+            }
+            setInputValue(transcript);
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+        };
+
+        recognition.onerror = (event: any) => {
+            console.error('Speech recognition error:', event.error);
+            setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+
+        return () => {
+            recognition.abort();
+        };
+    }, []);
+
+    const toggleListening = useCallback(() => {
+        if (!recognitionRef.current) {
+            alert('Speech recognition is not supported in this browser.');
+            return;
+        }
+        if (isListening) {
+            recognitionRef.current.stop();
+            setIsListening(false);
+        } else {
+            setInputValue('');
+            recognitionRef.current.start();
+            setIsListening(true);
+        }
+    }, [isListening]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -89,7 +139,7 @@ export const ChatbotView: React.FC = () => {
                 }}>
                     {messages.length <= 1 ? (
                         <div style={{ textAlign: 'center', marginBottom: '40px', animation: 'fadeIn 0.5s ease-out' }}>
-                            <div style={{ fontSize: '16px', color: '#888', marginBottom: '8px' }}>Hey User 👋</div>
+                            <div style={{ fontSize: '16px', color: '#888', marginBottom: '8px' }}>Hey Boss 👋</div>
                             <div style={{ fontSize: '28px', fontWeight: 'bold', background: 'linear-gradient(90deg, #fff, #aaa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                                 What's on your mind?
                             </div>
@@ -222,33 +272,37 @@ export const ChatbotView: React.FC = () => {
                             </button>
                         ) : (
                             <button
-                                // Voice Trigger (Placeholder for now, or hook into AssistantContext if verified)
-                                onClick={() => setIsListening(!isListening)}
+                                onClick={toggleListening}
                                 style={{
                                     width: '40px',
                                     height: '40px',
                                     borderRadius: '50%',
-                                    background: 'linear-gradient(135deg, #6e45e2 0%, #88d3ce 100%)', // Premium gradient
+                                    background: isListening
+                                        ? 'linear-gradient(135deg, #ff4444 0%, #ff6b6b 100%)'
+                                        : 'linear-gradient(135deg, #6e45e2 0%, #88d3ce 100%)',
                                     border: 'none',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     cursor: 'pointer',
-                                    position: 'relative'
+                                    position: 'relative',
+                                    transition: 'all 0.3s ease'
                                 }}
                             >
                                 {/* Pulsating Effect Layer */}
-                                <div style={{
-                                    position: 'absolute',
-                                    width: '100%',
-                                    height: '100%',
-                                    borderRadius: '50%',
-                                    background: 'inherit',
-                                    animation: 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
-                                    opacity: 0.5,
-                                    zIndex: -1
-                                }}></div>
-                                <Mic size={20} color="#fff" />
+                                {isListening && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        width: '100%',
+                                        height: '100%',
+                                        borderRadius: '50%',
+                                        background: 'inherit',
+                                        animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
+                                        opacity: 0.5,
+                                        zIndex: -1
+                                    }}></div>
+                                )}
+                                {isListening ? <MicOff size={20} color="#fff" /> : <Mic size={20} color="#fff" />}
                             </button>
                         )}
                     </div>

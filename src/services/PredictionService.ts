@@ -1,4 +1,4 @@
-import { Task } from '../types/task';
+// PredictionService - Local AI-driven task suggestions
 
 interface CompletionRecord {
     title: string;

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGrocery } from '../../context/GroceryContext';
 import { StockLevel } from '../../types/grocery';
-import { Plus, ShoppingCart, AlertCircle, ExternalLink, Edit2, Trash2, Save, X } from 'lucide-react';
+import { Plus, AlertCircle, ExternalLink, Edit2, Trash2, Save, X } from 'lucide-react';
 import '../../styles/main.css';
 
 export const GroceryView: React.FC = () => {

@@ -89,7 +89,7 @@ export default function Home() {
                                         onClick={() => setIsNavOpen(true)}
                                         style={{
                                             position: 'fixed',
-                                            bottom: '100px',
+                                            bottom: '140px',
                                             right: '24px',
                                             width: '56px',
                                             height: '56px',

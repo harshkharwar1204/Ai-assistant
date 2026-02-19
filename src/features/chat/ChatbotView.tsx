@@ -17,7 +17,7 @@ export const ChatbotView: React.FC = () => {
         if (!SpeechRecognition) return;
 
         const recognition = new SpeechRecognition();
-        recognition.continuous = false;
+        recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'en-IN';
 

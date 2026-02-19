@@ -7,7 +7,7 @@ interface CompletionRecord {
     count: number;
 }
 
-const STORAGE_KEY = 'life-os-predictions';
+const STORAGE_KEY = 'omni-predictions';
 
 const getRecords = (): CompletionRecord[] => {
     if (typeof window === 'undefined') return [];

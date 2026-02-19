@@ -18,12 +18,12 @@ const HabitContext = createContext<HabitContextType | undefined>(undefined);
 export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [habits, setHabits] = useState<Habit[]>(() => {
         if (typeof window === 'undefined') return [];
-        const saved = localStorage.getItem('life-os-habits');
+        const saved = localStorage.getItem('omni-habits');
         return saved ? JSON.parse(saved) : [];
     });
 
     useEffect(() => {
-        localStorage.setItem('life-os-habits', JSON.stringify(habits));
+        localStorage.setItem('omni-habits', JSON.stringify(habits));
     }, [habits]);
 
     const addHabit = (name: string) => {

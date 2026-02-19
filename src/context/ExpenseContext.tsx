@@ -22,7 +22,7 @@ const ExpenseContext = createContext<ExpenseContextType | undefined>(undefined);
 export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [expenses, setExpenses] = useState<Expense[]>(() => {
         if (typeof window === 'undefined') return [];
-        const saved = localStorage.getItem('life-os-expenses');
+        const saved = localStorage.getItem('omni-expenses');
         return saved ? JSON.parse(saved) : [];
     });
 
@@ -30,7 +30,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [syncError, setSyncError] = useState<string | null>(null);
 
     useEffect(() => {
-        localStorage.setItem('life-os-expenses', JSON.stringify(expenses));
+        localStorage.setItem('omni-expenses', JSON.stringify(expenses));
     }, [expenses]);
 
     const addExpense = (expense: Omit<Expense, 'id'>) => {

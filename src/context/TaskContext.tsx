@@ -27,7 +27,7 @@ const TaskContext = createContext<TaskContextType | undefined>(undefined);
 export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [tasks, setTasks] = useState<Task[]>(() => {
         if (typeof window === 'undefined') return [];
-        const saved = localStorage.getItem('life-os-tasks');
+        const saved = localStorage.getItem('omni-tasks');
         return saved ? JSON.parse(saved) : [];
     });
 
@@ -36,7 +36,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [syncError, setSyncError] = useState<string | null>(null);
 
     useEffect(() => {
-        localStorage.setItem('life-os-tasks', JSON.stringify(tasks));
+        localStorage.setItem('omni-tasks', JSON.stringify(tasks));
     }, [tasks]);
 
     // Check for missed tasks on mount

@@ -23,7 +23,7 @@ const AssistantContext = createContext<AssistantContextType | undefined>(undefin
 
 export const AssistantProvider = ({ children }: { children: ReactNode }) => {
     const [messages, setMessages] = useState<Message[]>([
-        { role: 'assistant', content: "Hi! I'm your Life OS Assistant. How can I help you today?" }
+        { role: 'assistant', content: "Hi! I'm Omni, your personal assistant. How can I help you today?" }
     ]);
     const [isTyping, setIsTyping] = useState(false);
     const [isOpen, setIsOpen] = useState(false);

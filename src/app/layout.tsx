@@ -2,12 +2,12 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-    title: 'Life OS',
-    description: 'Personal Life Operating System',
+    title: 'Omni',
+    description: 'Your Personal AI Assistant',
     appleWebApp: {
         capable: true,
         statusBarStyle: 'black-translucent',
-        title: 'Life OS',
+        title: 'Omni',
     },
     formatDetection: {
         telephone: false,

@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'Life OS',
-        short_name: 'LifeOS',
-        description: 'Personal Life Operating System',
+        name: 'Omni',
+        short_name: 'Omni',
+        description: 'Your Personal AI Assistant',
         theme_color: '#000000',
         background_color: '#000000',
         display: 'standalone',

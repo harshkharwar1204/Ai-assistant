@@ -9,7 +9,7 @@ const getLocalDateKey = () => {
     return `${year}-${month}-${day}`;
 };
 
-const SYSTEM_PROMPT = `You are a personal life assistant for the user's "Life OS" app.
+const SYSTEM_PROMPT = `You are a personal life assistant for the user's "Omni" app.
 You have access to structured tools to help the user manage their life.
 
 TOOLS AVAILABLE:

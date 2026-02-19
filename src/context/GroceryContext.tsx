@@ -21,12 +21,12 @@ const GroceryContext = createContext<GroceryContextType | undefined>(undefined);
 export const GroceryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [items, setItems] = useState<GroceryItem[]>(() => {
         if (typeof window === 'undefined') return [];
-        const saved = localStorage.getItem('life-os-grocery');
+        const saved = localStorage.getItem('omni-grocery');
         return saved ? JSON.parse(saved) : [];
     });
 
     useEffect(() => {
-        localStorage.setItem('life-os-grocery', JSON.stringify(items));
+        localStorage.setItem('omni-grocery', JSON.stringify(items));
     }, [items]);
 
     const addItem = (name: string, category?: string) => {

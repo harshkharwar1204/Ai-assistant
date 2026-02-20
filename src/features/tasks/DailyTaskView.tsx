@@ -2,15 +2,29 @@
 
 import React, { useState } from 'react';
 import { useTasks } from '@/context/TaskContext';
-import { Check, Trash2, Edit2, X, Save, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Check, Trash2, Edit2, X, Save, Loader2, RefreshCw, AlertCircle, Flag, ChevronDown, ChevronUp } from 'lucide-react';
 import { DateStrip } from '@/components/DateStrip';
 import { Header } from '@/components/Header';
+import { Task } from '@/types/task';
 
 const toDateKey = (d: Date) => {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+};
+
+const PRIORITY_COLORS: Record<string, string> = {
+    high: '#FF3B30',
+    medium: '#FF9500',
+    low: '#007AFF',
+    none: 'transparent',
+};
+
+const PRIORITY_LABELS: Record<string, string> = {
+    high: '!!!',
+    medium: '!!',
+    low: '!',
 };
 
 interface DailyTaskViewProps {
@@ -26,6 +40,7 @@ export const DailyTaskView: React.FC<DailyTaskViewProps> = ({
     const { tasks, toggleTaskCompletion, deleteTask, updateTask, syncReminders, isSyncing, syncError, clearTasksByDate } = useTasks();
     const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
     const [editTitle, setEditTitle] = useState('');
+    const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
 
     // Filter tasks for the selected date
     const dateTasks = tasks.filter(t => {
@@ -34,8 +49,17 @@ export const DailyTaskView: React.FC<DailyTaskViewProps> = ({
     });
 
     const sortedTasks = [...dateTasks].sort((a, b) => {
-        if (a.status === b.status) return 0;
-        return a.status === 'completed' ? 1 : -1;
+        // Completed tasks at the bottom
+        if (a.status !== b.status) return a.status === 'completed' ? 1 : -1;
+        // Then by priority
+        const priorityOrder = { high: 0, medium: 1, low: 2, none: 3 };
+        const pa = priorityOrder[a.priority || 'none'] ?? 3;
+        const pb = priorityOrder[b.priority || 'none'] ?? 3;
+        if (pa !== pb) return pa - pb;
+        // Then flagged first
+        if (a.flagged && !b.flagged) return -1;
+        if (!a.flagged && b.flagged) return 1;
+        return 0;
     });
 
     const isToday = selectedDate === toDateKey(new Date());
@@ -47,7 +71,7 @@ export const DailyTaskView: React.FC<DailyTaskViewProps> = ({
         return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
     })();
 
-    const startEditing = (task: any) => {
+    const startEditing = (task: Task) => {
         setEditingTaskId(task.id);
         setEditTitle(task.title);
     };
@@ -63,6 +87,10 @@ export const DailyTaskView: React.FC<DailyTaskViewProps> = ({
     const cancelEdit = () => {
         setEditingTaskId(null);
         setEditTitle('');
+    };
+
+    const toggleNotes = (taskId: string) => {
+        setExpandedNoteId(prev => prev === taskId ? null : taskId);
     };
 
     return (
@@ -170,110 +198,191 @@ export const DailyTaskView: React.FC<DailyTaskViewProps> = ({
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {sortedTasks.map((task, index) => (
-                    <div
-                        key={task.id}
-                        className="card animate-enter"
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '16px',
-                            animationDelay: `${index * 0.05}s`,
-                            transition: 'all 0.2s ease',
-                            opacity: task.status === 'completed' ? 0.6 : 1,
-                            transform: task.status === 'completed' ? 'scale(0.98)' : 'scale(1)',
-                            position: 'relative'
-                        }}
-                    >
-                        {/* Checkbox */}
+                {sortedTasks.map((task, index) => {
+                    const priorityColor = PRIORITY_COLORS[task.priority || 'none'];
+                    const hasPriority = task.priority && task.priority !== 'none';
+                    const hasNotes = task.notes && task.notes.trim().length > 0;
+                    const isNotesExpanded = expandedNoteId === task.id;
+
+                    return (
                         <div
-                            onClick={() => toggleTaskCompletion(task.id)}
+                            key={task.id}
+                            className="card animate-enter"
                             style={{
-                                minWidth: '24px',
-                                height: '24px',
-                                borderRadius: '50%',
-                                border: task.status === 'completed' ? 'none' : '2px solid #333',
-                                background: task.status === 'completed' ? 'var(--success-color)' : 'transparent',
                                 display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
+                                alignItems: 'flex-start',
+                                gap: '16px',
+                                animationDelay: `${index * 0.05}s`,
+                                transition: 'all 0.2s ease',
+                                opacity: task.status === 'completed' ? 0.6 : 1,
+                                transform: task.status === 'completed' ? 'scale(0.98)' : 'scale(1)',
+                                position: 'relative',
+                                borderLeft: hasPriority ? `3px solid ${priorityColor}` : undefined,
                             }}
                         >
-                            {task.status === 'completed' && <Check size={14} color="black" strokeWidth={3} />}
-                        </div>
+                            {/* Checkbox */}
+                            <div
+                                onClick={() => toggleTaskCompletion(task.id)}
+                                style={{
+                                    minWidth: '24px',
+                                    height: '24px',
+                                    borderRadius: '50%',
+                                    border: task.status === 'completed' ? 'none' : '2px solid #333',
+                                    background: task.status === 'completed' ? 'var(--success-color)' : 'transparent',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    marginTop: '2px',
+                                }}
+                            >
+                                {task.status === 'completed' && <Check size={14} color="black" strokeWidth={3} />}
+                            </div>
 
-                        {/* Content */}
-                        <div style={{ flex: 1 }}>
+                            {/* Content */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                {editingTaskId === task.id ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <input
+                                            type="text"
+                                            value={editTitle}
+                                            onChange={(e) => setEditTitle(e.target.value)}
+                                            autoFocus
+                                            style={{
+                                                border: '1px solid var(--primary-color)',
+                                                borderRadius: '8px',
+                                                padding: '4px 8px',
+                                                fontSize: '16px',
+                                                width: '100%',
+                                                background: 'transparent',
+                                                color: 'var(--text-color)'
+                                            }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div
+                                                onClick={() => startEditing(task)}
+                                                style={{
+                                                    fontSize: '16px',
+                                                    fontWeight: 600,
+                                                    textDecoration: task.status === 'completed' ? 'line-through' : 'none',
+                                                    color: task.status === 'completed' ? 'var(--text-secondary)' : 'var(--text-color)',
+                                                    cursor: 'text',
+                                                    flex: 1,
+                                                    minWidth: 0,
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                }}
+                                            >
+                                                {task.title}
+                                            </div>
+
+                                            {/* Flagged indicator */}
+                                            {task.flagged && (
+                                                <Flag size={14} color="#FF9500" fill="#FF9500" style={{ flexShrink: 0 }} />
+                                            )}
+
+                                            {/* Priority badge */}
+                                            {hasPriority && (
+                                                <span style={{
+                                                    fontSize: '11px',
+                                                    fontWeight: 700,
+                                                    color: priorityColor,
+                                                    flexShrink: 0,
+                                                }}>
+                                                    {PRIORITY_LABELS[task.priority!]}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Meta row: time + list badge */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
+                                            {task.dueTime && (
+                                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                                    {new Date(task.dueTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            )}
+                                            {task.list && (
+                                                <span style={{
+                                                    fontSize: '11px',
+                                                    fontWeight: 600,
+                                                    color: 'var(--text-secondary)',
+                                                    background: 'rgba(255,255,255,0.06)',
+                                                    border: '1px solid rgba(255,255,255,0.1)',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '10px',
+                                                }}>
+                                                    {task.list}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Notes preview */}
+                                        {hasNotes && (
+                                            <div
+                                                onClick={() => toggleNotes(task.id)}
+                                                style={{
+                                                    marginTop: '6px',
+                                                    fontSize: '13px',
+                                                    color: 'var(--text-secondary)',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'flex-start',
+                                                    gap: '4px',
+                                                }}
+                                            >
+                                                <span style={{
+                                                    overflow: isNotesExpanded ? 'visible' : 'hidden',
+                                                    textOverflow: isNotesExpanded ? 'unset' : 'ellipsis',
+                                                    whiteSpace: isNotesExpanded ? 'pre-wrap' : 'nowrap',
+                                                    flex: 1,
+                                                    lineHeight: '1.4',
+                                                }}>
+                                                    {task.notes}
+                                                </span>
+                                                {task.notes!.length > 60 && (
+                                                    isNotesExpanded
+                                                        ? <ChevronUp size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
+                                                        : <ChevronDown size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
+                                                )}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Actions */}
                             {editingTaskId === task.id ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <input
-                                        type="text"
-                                        value={editTitle}
-                                        onChange={(e) => setEditTitle(e.target.value)}
-                                        autoFocus
-                                        style={{
-                                            border: '1px solid var(--primary-color)',
-                                            borderRadius: '8px',
-                                            padding: '4px 8px',
-                                            fontSize: '16px',
-                                            width: '100%',
-                                            background: 'transparent',
-                                            color: 'var(--text-color)'
-                                        }}
-                                    />
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button onClick={saveEdit} style={{ background: 'none', border: 'none', color: 'var(--success-color)', cursor: 'pointer', padding: '8px' }}>
+                                        <Save size={24} />
+                                    </button>
+                                    <button onClick={cancelEdit} style={{ background: 'none', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', padding: '8px' }}>
+                                        <X size={24} />
+                                    </button>
                                 </div>
                             ) : (
-                                <div
-                                    onClick={() => startEditing(task)}
-                                    style={{
-                                        fontSize: '16px',
-                                        fontWeight: 600,
-                                        textDecoration: task.status === 'completed' ? 'line-through' : 'none',
-                                        color: task.status === 'completed' ? 'var(--text-secondary)' : 'var(--text-color)',
-                                        cursor: 'text'
-                                    }}
-                                >
-                                    {task.title}
-                                </div>
-                            )}
-
-                            {task.dueTime && !editingTaskId && (
-                                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                    {new Date(task.dueTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                <div className="show-on-hover" style={{ display: 'flex', gap: '4px' }}>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); startEditing(task); }}
+                                        style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: '8px' }}
+                                    >
+                                        <Edit2 size={24} />
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); if (confirm('Delete task?')) deleteTask(task.id); }}
+                                        style={{ background: 'none', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', padding: '8px' }}
+                                    >
+                                        <Trash2 size={24} />
+                                    </button>
                                 </div>
                             )}
                         </div>
-
-                        {/* Actions */}
-                        {editingTaskId === task.id ? (
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button onClick={saveEdit} style={{ background: 'none', border: 'none', color: 'var(--success-color)', cursor: 'pointer', padding: '8px' }}>
-                                    <Save size={24} />
-                                </button>
-                                <button onClick={cancelEdit} style={{ background: 'none', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', padding: '8px' }}>
-                                    <X size={24} />
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="show-on-hover" style={{ display: 'flex', gap: '4px' }}>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); startEditing(task); }}
-                                    style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: '8px' }}
-                                >
-                                    <Edit2 size={24} />
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); if (confirm('Delete task?')) deleteTask(task.id); }}
-                                    style={{ background: 'none', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', padding: '8px' }}
-                                >
-                                    <Trash2 size={24} />
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                ))}
+                    );
+                })}
 
                 {dateTasks.length === 0 && (
                     <div style={{

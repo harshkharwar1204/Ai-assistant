@@ -11,7 +11,7 @@ const toDateKey = (d: Date) => d.toISOString().split('T')[0];
 
 interface TaskContextType {
     tasks: Task[];
-    addTask: (title: string, scheduledDate?: string, dueTime?: string) => void;
+    addTask: (title: string, scheduledDate?: string, dueTime?: string, priority?: Task['priority'], notes?: string) => void;
     toggleTaskCompletion: (id: string) => void;
     updateTask: (id: string, updates: Partial<Task>) => void;
     deleteTask: (id: string) => void;
@@ -64,34 +64,159 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setMissedTasks([]);
     };
 
-    const requestNotificationPermission = () => {
-        if ('Notification' in window) {
-            Notification.requestPermission();
+    const requestNotificationPermission = async () => {
+        if ('Notification' in window && Notification.permission === 'default') {
+            await Notification.requestPermission();
         }
     };
 
+    // Subscribe to push notifications
     useEffect(() => {
-        const interval = setInterval(() => {
+        const subscribeToPush = async () => {
+            if (typeof window === 'undefined') return;
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+            try {
+                await requestNotificationPermission();
+                if (Notification.permission !== 'granted') return;
+
+                const registration = await navigator.serviceWorker.ready;
+                const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+                if (!vapidPublicKey) return;
+
+                // Check if already subscribed
+                let subscription = await registration.pushManager.getSubscription();
+                if (!subscription) {
+                    // Convert VAPID key to Uint8Array
+                    const urlBase64ToUint8Array = (base64String: string) => {
+                        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                        const rawData = window.atob(base64);
+                        const outputArray = new Uint8Array(rawData.length);
+                        for (let i = 0; i < rawData.length; ++i) {
+                            outputArray[i] = rawData.charCodeAt(i);
+                        }
+                        return outputArray;
+                    };
+
+                    subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+                    });
+                }
+
+                // Store subscription for use in notification sending
+                localStorage.setItem('omni-push-subscription', JSON.stringify(subscription));
+            } catch (err) {
+                console.error('Push subscription failed:', err);
+            }
+        };
+
+        subscribeToPush();
+    }, []);
+
+    // Check for due tasks and send push notifications
+    useEffect(() => {
+        const checkAndNotify = async () => {
             const now = new Date();
-            tasks.forEach(task => {
-                if (task.status === 'pending' && task.dueTime) {
-                    const due = new Date(task.dueTime);
-                    if (due <= now && due.getTime() > now.getTime() - 60000) {
-                        if (Notification.permission === 'granted') {
-                            new Notification('Task Due!', {
-                                body: `It's time for: ${task.title}`,
-                                icon: '/icon-192x192.png'
+            const NOTIFICATION_WINDOW_MS = 30 * 60 * 1000; // 30 minutes
+
+            // Get already-notified task IDs
+            const notifiedRaw = localStorage.getItem('omni-notified-tasks');
+            const notified: Record<string, number> = notifiedRaw ? JSON.parse(notifiedRaw) : {};
+
+            // Clean old entries (older than 24 hours)
+            const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+            for (const key of Object.keys(notified)) {
+                if (notified[key] < dayAgo) delete notified[key];
+            }
+
+            const subscription = localStorage.getItem('omni-push-subscription');
+            const parsedSub = subscription ? JSON.parse(subscription) : null;
+
+            for (const task of tasks) {
+                if (task.status !== 'pending' || !task.dueTime) continue;
+                if (notified[task.id]) continue;
+
+                const due = new Date(task.dueTime);
+                const diff = now.getTime() - due.getTime();
+
+                // Notify if due time is within the past NOTIFICATION_WINDOW or within next 30 seconds
+                if (diff >= -30000 && diff <= NOTIFICATION_WINDOW_MS) {
+                    notified[task.id] = Date.now();
+
+                    const priorityLabel = task.priority && task.priority !== 'none'
+                        ? ` [${task.priority.toUpperCase()}]`
+                        : '';
+                    const listLabel = task.list ? ` • ${task.list}` : '';
+                    const body = `It's time for: ${task.title}${priorityLabel}${listLabel}`;
+
+                    // Try push notification via server first
+                    if (parsedSub) {
+                        try {
+                            const res = await fetch('/api/notifications/send', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    subscription: parsedSub,
+                                    title: '⏰ Task Due!',
+                                    body,
+                                    tag: `task-${task.id}`,
+                                    taskId: task.id,
+                                }),
                             });
+
+                            if (res.ok) continue; // Push sent successfully
+
+                            // If subscription expired, clear it
+                            const data = await res.json();
+                            if (data.expired) {
+                                localStorage.removeItem('omni-push-subscription');
+                            }
+                        } catch {
+                            // Push failed, fall through to SW showNotification
                         }
                     }
-                }
-            });
-        }, 60000);
 
+                    // Fallback: use service worker showNotification directly
+                    try {
+                        const registration = await navigator.serviceWorker?.ready;
+                        if (registration) {
+                            await registration.showNotification('⏰ Task Due!', {
+                                body,
+                                icon: '/icon-192x192.png',
+                                badge: '/icon-192x192.png',
+                                vibrate: [200, 100, 200],
+                                tag: `task-${task.id}`,
+                            } as any);
+                            continue;
+                        }
+                    } catch {
+                        // SW not available
+                    }
+
+                    // Last resort: basic Notification API
+                    if (Notification.permission === 'granted') {
+                        new Notification('⏰ Task Due!', {
+                            body,
+                            icon: '/icon-192x192.png',
+                        });
+                    }
+                }
+            }
+
+            localStorage.setItem('omni-notified-tasks', JSON.stringify(notified));
+        };
+
+        // Check immediately on mount and tasks change
+        checkAndNotify();
+
+        // Then check every 30 seconds
+        const interval = setInterval(checkAndNotify, 30000);
         return () => clearInterval(interval);
     }, [tasks]);
 
-    const addTask = (title: string, scheduledDate?: string, dueTime?: string) => {
+    const addTask = (title: string, scheduledDate?: string, dueTime?: string, priority?: Task['priority'], notes?: string) => {
         const newTask: Task = {
             id: generateId(),
             title,
@@ -99,6 +224,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             dueTime,
             scheduledDate: scheduledDate || toDateKey(new Date()),
             createdAt: new Date().toISOString(),
+            priority: priority || 'none',
+            notes,
         };
         setTasks(prev => [...prev, newTask]);
 
@@ -144,9 +271,41 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const remoteTasks: Task[] = await res.json();
 
             setTasks(prev => {
-                const existingTitles = new Set(prev.map(t => t.title.toLowerCase()));
-                const newTasks = remoteTasks.filter(t => !existingTitles.has(t.title.toLowerCase()));
-                return [...prev, ...newTasks];
+                const updated = [...prev];
+                const existingByUid = new Map<string, number>();
+                const existingByTitle = new Map<string, number>();
+
+                // Index existing tasks
+                updated.forEach((t, i) => {
+                    if (t.icloudUid) existingByUid.set(t.icloudUid, i);
+                    existingByTitle.set(t.title.toLowerCase(), i);
+                });
+
+                for (const remote of remoteTasks) {
+                    // Check by iCloud UID first, then fall back to title
+                    const existingIdx = remote.icloudUid
+                        ? existingByUid.get(remote.icloudUid)
+                        : existingByTitle.get(remote.title.toLowerCase());
+
+                    if (existingIdx !== undefined) {
+                        // Update existing task with new properties from Reminders
+                        updated[existingIdx] = {
+                            ...updated[existingIdx],
+                            priority: remote.priority,
+                            notes: remote.notes,
+                            list: remote.list,
+                            flagged: remote.flagged,
+                            icloudUid: remote.icloudUid || updated[existingIdx].icloudUid,
+                            dueTime: remote.dueTime || updated[existingIdx].dueTime,
+                            scheduledDate: remote.scheduledDate || updated[existingIdx].scheduledDate,
+                        };
+                    } else {
+                        // New task
+                        updated.push(remote);
+                    }
+                }
+
+                return updated;
             });
         } catch (err: any) {
             setSyncError(err.message || 'Sync failed');

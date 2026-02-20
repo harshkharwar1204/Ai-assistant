@@ -4,6 +4,15 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Sparkles } from 'lucide-react';
 import { useTasks } from '@/context/TaskContext';
 import { PredictionService } from '@/services/PredictionService';
+import { TaskPriority } from '@/types/task';
+
+const PRIORITY_CYCLE: TaskPriority[] = ['none', 'high', 'medium', 'low'];
+const PRIORITY_CONFIG: Record<TaskPriority, { label: string; color: string; bg: string }> = {
+    none: { label: '', color: '', bg: '' },
+    high: { label: '!!!', color: '#FF3B30', bg: 'rgba(255, 59, 48, 0.15)' },
+    medium: { label: '!!', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.15)' },
+    low: { label: '!', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.15)' },
+};
 
 interface TaskInputProps {
     selectedDate: string; // YYYY-MM-DD
@@ -11,6 +20,7 @@ interface TaskInputProps {
 
 export const TaskInput: React.FC<TaskInputProps> = ({ selectedDate }) => {
     const [title, setTitle] = useState('');
+    const [priority, setPriority] = useState<TaskPriority>('none');
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const { addTask } = useTasks();
 
@@ -28,13 +38,20 @@ export const TaskInput: React.FC<TaskInputProps> = ({ selectedDate }) => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!title.trim()) return;
-        addTask(title, selectedDate);
+        addTask(title, selectedDate, undefined, priority);
         setTitle('');
+        setPriority('none');
     };
 
     const handleSuggestionClick = (sug: string) => {
         addTask(sug, selectedDate);
         setSuggestions(prev => prev.filter(s => s !== sug));
+    };
+
+    const cyclePriority = () => {
+        const currentIndex = PRIORITY_CYCLE.indexOf(priority);
+        const nextIndex = (currentIndex + 1) % PRIORITY_CYCLE.length;
+        setPriority(PRIORITY_CYCLE[nextIndex]);
     };
 
     const isToday = (() => {
@@ -47,6 +64,8 @@ export const TaskInput: React.FC<TaskInputProps> = ({ selectedDate }) => {
     const dateLabel = isToday
         ? ''
         : new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    const pConfig = PRIORITY_CONFIG[priority];
 
     return (
         <div style={{
@@ -103,6 +122,32 @@ export const TaskInput: React.FC<TaskInputProps> = ({ selectedDate }) => {
                 boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
                 alignItems: 'center'
             }}>
+                {/* Priority Toggle */}
+                <button
+                    type="button"
+                    onClick={cyclePriority}
+                    style={{
+                        background: priority !== 'none' ? pConfig.bg : 'transparent',
+                        border: priority !== 'none' ? `1px solid ${pConfig.color}` : '1px solid var(--border-color)',
+                        borderRadius: '50%',
+                        width: '36px',
+                        height: '36px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        marginLeft: '4px',
+                        color: priority !== 'none' ? pConfig.color : 'var(--text-secondary)',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        flexShrink: 0,
+                        transition: 'all 0.2s',
+                    }}
+                    title={`Priority: ${priority} (tap to cycle)`}
+                >
+                    {priority !== 'none' ? pConfig.label : '○'}
+                </button>
+
                 {!isToday && dateLabel && (
                     <span style={{
                         fontSize: '12px',
